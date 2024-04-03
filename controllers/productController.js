@@ -96,7 +96,7 @@ const findProducts = async (req, res, next) => {
     const limitNum = parseInt(limit) || 1;
     const offset = (pageNum - 1) * limitNum;
 
-    const {products} = await Product.findAll({
+    const products = await Product.findAll({
       include: [
         {
           model: Shop,
@@ -141,6 +141,10 @@ const findProductById = async (req, res, next) => {
         id: req.params.id,
       },
     });
+
+    if (product.userId !== req.user.id) {
+      return next(new ApiError('Kamu bukan Pemilik Produk ini', 401))
+    }
 
     res.status(200).json({
       status: "Success",
