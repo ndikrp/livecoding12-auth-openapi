@@ -55,7 +55,7 @@ const createProduct = async (req, res, next) => {
           fileName: `IMG-${Date.now()}.${extension}`,
         });
         console.log(uploadedImage)
-        images.push(uploadedImage.url); // Push the image URL to the array
+        images.push(uploadedImage.url); 
       }));
     }
     console.log(images)
@@ -82,7 +82,7 @@ const createProduct = async (req, res, next) => {
 
 const findProducts = async (req, res, next) => {
   try {
-    const { productname, username, shop } = req.query;
+    const { productname, username, shop, page, limit } = req.query;
     const condition = {};
     if (productname) condition.name = { [Op.iLike]: `%${productname}%` };
 
@@ -92,21 +92,41 @@ const findProducts = async (req, res, next) => {
     const includeUserCondition = {};
     if (username) includeUserCondition.name = { [Op.iLike]: `${username}%` };
 
-    const products = await Product.findAll({
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 1;
+    const offset = (pageNum - 1) * limitNum;
+
+    const {products} = await Product.findAll({
       include: [
         {
           model: Shop,
           where: includeShopCondition,
+          attribute: ["name"],
+        },
+        {
+          model: User,
+          attribute: ["name"],
         },
       ],
       where: condition,
       order: [["id", "ASC"]],
+      attribute: ["name", "price", "stock", "createdAt", "updatedAt"],
+      limit: limitNum,
+      offset: offset,
     });
+
+    const totalPages = Math.ceil(await Product.count() / limitNum);
+    const currentPage = pageNum;
 
     res.status(200).json({
       status: "Success",
       data: {
         products,
+        pagination: {
+          currentPage,
+          totalPages,
+          limit
+        }
       },
     });
   } catch (err) {
